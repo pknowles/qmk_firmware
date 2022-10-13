@@ -31,27 +31,38 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * └────┴────┴────┴────────────────────────┴────┴────┴────┴────┘
      */
     [0] = LAYOUT(KC_NO,
-        //KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,   
-        //KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,   
-        //KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,   
-        //KC_LSFT,          KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,   
-        //KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC, 
                 KC_GRV, KC_1, KC_2, KC_3, KC_4, KC_5, KC_6,
-                RGB_MOD, KC_Q, KC_W, KC_E, KC_R, KC_T, RESET,
-                RGB_HUI, KC_A, KC_S, KC_D, KC_F, KC_G, KC_TAB,
-                KC_ESC, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_TAB,
+                RGB_MOD, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_DEL,
+                KC_LGUI, KC_A, KC_S, KC_D, KC_F, KC_G, KC_TAB,
+                KC_ESC, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_ENT,
                                     KC_LSFT, KC_LCTL, KC_SPC,
-                                    KC_LALT, KC_LGUI, KC_ENT
+                                    KC_LALT, MO(1), MO(2)
+    ),
+    [1] = LAYOUT(KC_NO,
+                KC_TRNS, KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6,
+                KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, RESET,
+                KC_TRNS, KC_TRNS, KC_TRNS, KC_LBRC, KC_RBRC, KC_TRNS, KC_BSPC,
+                KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_BSPC,
+                                    KC_TRNS, KC_TRNS, KC_TRNS,
+                                    KC_TRNS, KC_TRNS, KC_TRNS
+    ),
+    [2] = LAYOUT(KC_NO,
+                KC_7, KC_8, KC_9, KC_0, KC_MINS, KC_EQL, KC_BSPC,
+                KC_BSPC, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_BSLS,
+                KC_ENT, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOTE,
+                KC_ENT, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLASH, KC_TRNS,
+                                    KC_TRNS, KC_TRNS, KC_TRNS,
+                                    KC_TRNS, KC_TRNS, KC_TRNS
     )
 };
 
 led_config_t g_led_config = {
   // Key Matrix to LED Index
   LAYOUT(NO_LED,
-                27, 28, 29, 30, 31, 32, 33,
-                26, 25, 24, 23, 22, 21, 20,
-                13, 14, 15, 16, 17, 18, 19,
-                12, 11, 10,  9,  8,  7,  6,
+                30, 31, 32, 33, 34, 35, 36,
+                29, 28, 27, 26, 25, 24, 23,
+                16, 17, 18, 19, 20, 21, 22,
+                15, 14, 13, 12, 11, 10,  9,
                                     5, 4, 1,
                                     3, 2, 0
     
@@ -84,6 +95,70 @@ led_config_t g_led_config = {
   4, 4, 4, 4, 4, 4, 4
 } };
 
+bool indicator_color(int index, int layer_from, int layer_to, int ticks)
+{
+    static const RGB layer_colors[] = {{RGB_OFF}, {0x00, 0x80, 0x00}, {0x80, 0x00, 0x00}, {0x00, 0x00, 0xFF}};
+    const uint8_t stepTime = 8;
+    uint8_t step = ticks / stepTime;
+    uint8_t interp = step < index ? 0 : (step > index ? stepTime : ticks - step * stepTime);
+    //interp = (interp * interp) / 8;
+    RGB a = layer_colors[layer_from];
+    RGB b = layer_colors[layer_to];
+    RGB rgb;
+    rgb.r = (a.r * (stepTime - interp) + b.r * interp) / stepTime;
+    rgb.g = (a.g * (stepTime - interp) + b.g * interp) / stepTime;
+    rgb.b = (a.b * (stepTime - interp) + b.b * interp) / stepTime;
+    rgb_matrix_set_color(index + 6, rgb.r, rgb.g, rgb.b);
+    bool done = step >= 3;
+    return done;
+}
+
+//
+void rgb_matrix_indicators_kb(void) {
+    /*
+    if (layer_state & 2)
+        rgb_matrix_set_color(6, RGB_GREEN);
+    else
+        rgb_matrix_set_color(6, RGB_OFF);
+    if (layer_state & 4)
+        rgb_matrix_set_color(7, RGB_RED);
+    else
+        rgb_matrix_set_color(7, RGB_OFF);
+    if (layer_state & 8)
+        rgb_matrix_set_color(8, RGB_BLUE);
+    else
+        rgb_matrix_set_color(8, RGB_OFF);
+    */
+    
+    static uint8_t ticks = 0;
+    static uint8_t old_layer = 0;
+    static uint8_t last_layer = 0;
+    uint8_t layer = get_highest_layer(layer_state);
+    if (layer > 3) layer = 3;
+    if (layer != last_layer)
+    {
+        old_layer = last_layer;
+        ticks = 0;
+    }
+    last_layer = layer;
+    indicator_color(0, old_layer, layer, ticks);
+    indicator_color(1, old_layer, layer, ticks);
+    if (!indicator_color(2, old_layer, layer, ticks))
+        ++ticks;
+}
+
+layer_state_t layer_state_set_user(layer_state_t state) {
+    switch (get_highest_layer(state)) {
+    case 2:
+    case 1:
+    rgb_matrix_mode(RGB_MATRIX_CUSTOM_test);
+        break;
+    default:
+        rgb_matrix_mode(RGB_MATRIX_RAINBOW_MOVING_CHEVRON);
+        break;
+    }
+  return state;
+}
 
 //float mysong[][2] = SONG(PREONIC_SOUND);
 //bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -133,9 +208,42 @@ static void render_logo(void) {
     oled_write_raw_P(logo, sizeof(logo));
 }
 
-bool oled_task_user(void) {
-    render_logo();
+static uint32_t info_timeout_start = 0;
+bool info_timed_out = true;
+
+bool oled_task_user(void)
+{
+    uint32_t timer_now = timer_read32();
+    bool timed_out = TIMER_DIFF_32(timer_now, info_timeout_start) > 10000;
+    bool dirty = timed_out != info_timed_out;
+    info_timed_out = timed_out;
+    if (info_timed_out)
+    {
+        if (dirty)
+            render_logo();
+    }
+    else
+    {
+        if (dirty)
+            oled_clear();
+        #ifdef DEBUG_MATRIX_SCAN_RATE
+        char rate_str[12];
+        itoa(get_matrix_scan_rate(), rate_str, 10);
+        oled_set_cursor(1, 1);
+        oled_write_P(PSTR("Scan: "), false);
+        oled_write_ln(rate_str, false);
+        itoa(get_rgb_matrix_display_rate(), rate_str, 10);
+        oled_set_cursor(1, 2);
+        oled_write_P(PSTR("RGB:  "), false);
+        oled_write_ln(rate_str, false);
+        #endif
+    }
     return false;
+}
+
+void post_process_record_user(uint16_t keycode, keyrecord_t *record)
+{
+    info_timeout_start = timer_read32();
 }
 
 // keyboards/sowbug/68keys/config.h
