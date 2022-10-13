@@ -252,6 +252,8 @@ static inline bool rgb_matrix_check_finished_leds(uint8_t led_idx) {
 #endif
 }
 
+uint32_t get_rgb_matrix_display_rate(void);
+
 extern const rgb_matrix_driver_t rgb_matrix_driver;
 
 extern rgb_config_t rgb_matrix_config;

@@ -401,6 +401,24 @@ static void rgb_task_render(uint8_t effect) {
     }
 }
 
+static uint32_t rgb_flush_count      = 0;
+static uint32_t last_rgb_flush_count = 0;
+static uint32_t rgb_flush_timer      = 0;
+
+void rgb_flush_perf_task(void) {
+    rgb_flush_count++;
+    uint32_t timer_now = timer_read32();
+    if (TIMER_DIFF_32(timer_now, rgb_flush_timer) >= 1000) {
+        last_rgb_flush_count = rgb_flush_count;
+        rgb_flush_timer = timer_now;
+        rgb_flush_count = 0;
+    }
+}
+
+uint32_t get_rgb_matrix_display_rate(void) {
+    return last_rgb_flush_count;
+}
+
 static void rgb_task_flush(uint8_t effect) {
     // update last trackers after the first full render so we can init over several frames
     rgb_last_effect = effect;
@@ -411,6 +429,7 @@ static void rgb_task_flush(uint8_t effect) {
 
     // next task
     rgb_task_state = SYNCING;
+    rgb_flush_perf_task();
 }
 
 void rgb_matrix_task(void) {
