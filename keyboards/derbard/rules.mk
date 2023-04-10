@@ -12,6 +12,7 @@ CFLAGS += -ffunction-sections -fdata-sections -fauto-inc-dec -fcompare-elim -fcp
 CXXFLAGS += -ffunction-sections -fdata-sections -fauto-inc-dec -fcompare-elim -fcprop-registers -fdce -fssa-dce
 LDFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections
 
-# TODO
-# keyboards/ergodox_ez/matrix.c
-#SRC += matrix.c
+# Right hand read with the MCP23017 GPIO expander
+CUSTOM_MATRIX = lite
+SRC += matrix.c
+QUANTUM_LIB_SRC += i2c_master.c
