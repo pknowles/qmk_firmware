@@ -77,7 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #        define OLED_DISPLAY_HEIGHT 32
 #    endif
 #    ifndef OLED_MATRIX_SIZE
-#        define OLED_MATRIX_SIZE (OLED_DISPLAY_HEIGHT / 8 * OLED_DISPLAY_WIDTH) // 512 (compile time mathed)
+#        define OLED_MATRIX_SIZE ((OLED_DISPLAY_HEIGHT / 8) * OLED_DISPLAY_WIDTH) // 512 (compile time mathed)
 #    endif
 #    ifndef OLED_BLOCK_TYPE
 #        define OLED_BLOCK_TYPE uint16_t // Type to use for segmenting the oled display for smart rendering, use unsigned types only

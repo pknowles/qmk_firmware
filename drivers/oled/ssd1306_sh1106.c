@@ -489,7 +489,7 @@ oled_buffer_reader_t oled_read_raw(uint16_t start_index) {
 }
 
 void oled_write_raw_byte(const char data, uint16_t index) {
-    if (index > OLED_MATRIX_SIZE) index = OLED_MATRIX_SIZE;
+    if (index >= OLED_MATRIX_SIZE) return;
     if (oled_buffer[index] == data) return;
     oled_buffer[index] = data;
     oled_dirty |= ((OLED_BLOCK_TYPE)1 << (index / OLED_BLOCK_SIZE));
