@@ -176,6 +176,8 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         }
     }
 
+    init_cols();
+#if 1
     // Left hand side
     pin_t matrix_col_pins_mcu[MATRIX_COLS_LEFT] = MATRIX_COL_PINS_MCU;
     pin_t matrix_row_pins_mcu[MATRIX_ROWS_LEFT] = MATRIX_ROW_PINS_MCU;
@@ -194,12 +196,16 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
             bool down = !readPin(matrix_row_pins_mcu[row]);
 
             // Populate the matrix row with the state of the col pin
-            col_value |= down ? (1U << row) : 0;
+            uint8_t col_mask = 1U << row;
+            col_value |= down ? col_mask : 0;
 
             // Compare with the original
-            col_value_prev |= (current_matrix[row] & (MATRIX_ROW_SHIFTER << col));
-            current_matrix[row] = current_matrix[row] & (~(MATRIX_ROW_SHIFTER << col));
-            current_matrix[row] |= down ? (MATRIX_ROW_SHIFTER << col) : 0;
+            matrix_row_t row_mask = MATRIX_ROW_SHIFTER << col;
+            col_value_prev |= (current_matrix[row] & row_mask) ? col_mask : 0;
+
+            // Update the matrix
+            current_matrix[row] = current_matrix[row] & (~row_mask);
+            current_matrix[row] |= down ? row_mask : 0;
         }
 
         changed |= (col_value != col_value_prev);
@@ -207,7 +213,23 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         // Un-select column
         setPinInput(matrix_col_pins_mcu[col]);
         writePinLow(matrix_col_pins_mcu[col]);
+
+        unselect_rows();
     }
+#endif
+
+#if 0
+    pin_t matrix_col_pins_mcu[MATRIX_COLS_LEFT] = MATRIX_COL_PINS_MCU;
+    pin_t matrix_row_pins_mcu[MATRIX_ROWS_LEFT] = MATRIX_ROW_PINS_MCU;
+
+    unselect_rows();
+    init_cols();
+    setPinOutput(matrix_col_pins_mcu[0]);
+    writePinLow(matrix_col_pins_mcu[0]);
+    mydebug = 0;
+    for (uint8_t row = 0; row < MATRIX_ROWS_LEFT; row++)
+        mydebug |= readPin(matrix_row_pins_mcu[row]) << row;
+#endif
 
     return changed;
 }
