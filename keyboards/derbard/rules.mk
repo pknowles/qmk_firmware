@@ -14,5 +14,5 @@ LDFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections
 
 # Right hand read with the MCP23017 GPIO expander
 CUSTOM_MATRIX = lite
-SRC += matrix.c
+SRC += matrix.c oled_animation.c
 QUANTUM_LIB_SRC += i2c_master.c
