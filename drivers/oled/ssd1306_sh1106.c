@@ -167,6 +167,9 @@ bool oled_init(oled_rotation_t rotation) {
     }
 #endif
 
+    // Clear first. The user may write to the buffer during init.
+    oled_clear();
+
     oled_rotation = oled_init_user(oled_init_kb(rotation));
     if (!HAS_FLAGS(oled_rotation, OLED_ROTATION_90)) {
         oled_rotation_width = OLED_DISPLAY_WIDTH;
@@ -225,7 +228,6 @@ bool oled_init(oled_rotation_t rotation) {
     oled_scroll_timeout = timer_read32() + OLED_SCROLL_TIMEOUT;
 #endif
 
-    oled_clear();
     oled_initialized = true;
     oled_active      = true;
     oled_scrolling   = false;
