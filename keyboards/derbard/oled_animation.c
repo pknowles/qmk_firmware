@@ -255,8 +255,13 @@ void anim_drop_at(int pixel, bool fill)
         activeAnims--;
     }
     anims[anim].pixel = pixel;
-    anims[anim].step  = fill ? 0 : 1;
+    anims[anim].step  = 0;
     anims[anim].fill  = fill;
+    if(!fill)
+    {
+        anim_draw(anims[anim], false);
+        anims[anim].step++;
+    }
     anim_draw(anims[anim], true);
     activeAnims++;
 }
@@ -281,6 +286,7 @@ void anim_drop(void)
     while(!found)
     {
         int x = anim_next % OLED_DISPLAY_WIDTH;
+        x = (x & 0xfffa) | ((x & 1) << 2) | ((x & 4) >> 2);
         int y = OLED_DISPLAY_HEIGHT - anim_next / OLED_DISPLAY_WIDTH - 1;
         anim_next++;
         found = logo_bit(x, y);
@@ -320,8 +326,12 @@ bool oled_task_user(void)
     }
     activeAnim = activeAnim % ANIMS;
 
-    //static int t = 0;
-    //if (t++ % 32 == 0) anim_drop();
+    uint32_t elapsed = timer_elapsed32(last_event_time);
+    if(elapsed > 3000 && elapsed < 300000)
+    {
+        if (rand() % 32 == 0)
+            anim_drop();
+    }
     return false;
 }
 
