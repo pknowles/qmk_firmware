@@ -1,10 +1,5 @@
 #include QMK_KEYBOARD_H
 
-typedef struct __attribute__((__packed__)) {
-    uint16_t position;
-    uint32_t bit;
-} LogoAnim;
-
 #if 0
 static uint32_t oled32_read(uint16_t line)
 {
@@ -83,8 +78,8 @@ static const char PROGMEM logo[] = {
 #define OLED_ALL_BLOCKS_MASK (((((OLED_BLOCK_TYPE)1 << (OLED_BLOCK_COUNT - 1)) - 1) << 1) | 1)
 extern uint8_t         oled_buffer[OLED_MATRIX_SIZE];
 extern OLED_BLOCK_TYPE oled_dirty;
-
-void anim_rain(int step)
+#if 0
+void anim_step(void)
 {
     oled_set_cursor(0, 0);
     srand(0);
@@ -120,9 +115,14 @@ void anim_rain(int step)
     #endif
     //oled_write_raw_P(logo, sizeof(logo));
 }
-
+#endif
 
 #if 0
+typedef struct __attribute__((__packed__)) {
+    uint16_t position;
+    uint32_t bit;
+} LogoAnim;
+
 static uint16_t fill_line = 0;
 static uint16_t active_anim = 0;
 static uint16_t active_anims = 0;
@@ -185,85 +185,152 @@ bool info_timed_out = true;
 extern int mydebug;
 int mydebug = 0;
 
+static uint32_t last_event_time = 0;
+
+static int anim_next = 0;
+static bool anim_fill = true;
+
+typedef struct __attribute__((__packed__)) {
+    int pixel;
+    int step;
+    bool fill;
+} LogoAnim;
+
+#define ANIMS 8
+
+static int activeAnim = 0;
+static int activeAnims = 0;
+static LogoAnim anims[ANIMS];
+
+typedef struct {
+    int x;
+    int y;
+} Pos;
+
+bool logo_bit(int x, int y)
+{
+    int index = x + (y >> 3) * OLED_DISPLAY_WIDTH;
+    char byte = pgm_read_byte(logo + index);
+    return (byte & (1 << (y & 0x7))) != 0;
+}
+
+Pos anim_pos(LogoAnim anim) {
+    Pos result;
+    result.x    = anim.pixel % OLED_DISPLAY_WIDTH;
+    int y_start = anim.fill ? 0 : anim.pixel / OLED_DISPLAY_WIDTH;
+    result.y    = y_start + (anim.step * anim.step) / 64;
+    return result;
+}
+
+Pos anim_pos_end(LogoAnim anim) {
+    Pos result;
+    result.x = anim.pixel % OLED_DISPLAY_WIDTH;
+    result.y = anim.fill ? anim.pixel / OLED_DISPLAY_WIDTH : OLED_DISPLAY_HEIGHT;
+    return result;
+}
+
+void anim_draw(LogoAnim anim, bool set)
+{
+    Pos pos = anim_pos(anim);
+    oled_write_pixel(pos.x, pos.y, set);
+}
+
+void anim_finish(LogoAnim anim)
+{
+    if(anim.fill)
+    {
+        Pos pos = anim_pos_end(anim);
+        oled_write_pixel(pos.x, pos.y, true);
+    }
+}
+
+void anim_drop_at(int pixel, bool fill)
+{
+    int anim = (activeAnim + activeAnims) % ANIMS;
+    if(activeAnims >= ANIMS)
+    {
+        anim_draw(anims[anim], false);
+        anim_finish(anims[anim]);
+        activeAnim = (activeAnim + 1) % ANIMS;
+        activeAnims--;
+    }
+    anims[anim].pixel = pixel;
+    anims[anim].step  = fill ? 0 : 1;
+    anims[anim].fill  = fill;
+    anim_draw(anims[anim], true);
+    activeAnims++;
+}
+
+bool anim_step(int anim)
+{
+    anim_draw(anims[anim], false);
+    anims[anim].step += 1;
+    Pos pos = anim_pos(anims[anim]);
+    Pos end = anim_pos_end(anims[anim]);
+    if (pos.y >= end.y) {
+        anim_finish(anims[anim]);
+        return true;
+    } else {
+        anim_draw(anims[anim], true);
+        return false;
+    }
+}
+void anim_drop(void)
+{
+    bool found = false;
+    while(!found)
+    {
+        int x = anim_next % OLED_DISPLAY_WIDTH;
+        int y = OLED_DISPLAY_HEIGHT - anim_next / OLED_DISPLAY_WIDTH - 1;
+        anim_next++;
+        found = logo_bit(x, y);
+        if (found) {
+            int pixel = x + y * OLED_DISPLAY_WIDTH;
+            anim_drop_at(pixel, anim_fill);
+        }
+        if (anim_next >= OLED_DISPLAY_WIDTH * OLED_DISPLAY_WIDTH) {
+            anim_next = 0;
+            anim_fill = !anim_fill;
+        }
+    }
+}
+
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
     oled_clear();
+    #if 1
+    oled_write_raw_P(logo, sizeof(logo));
+    anim_fill = false;
+    #endif
     return rotation;
 }
 
 bool oled_task_user(void)
 {
-#if 0
+    const int end = activeAnim + activeAnims;
+    for(int i = activeAnim; i < end; ++i)
     {
-        char debug_str[12];
-        itoa(mydebug, debug_str, 10);
-        //oled_clear();
-        oled_set_cursor(1, 1);
-        oled_write_P(PSTR("Debug: "), false);
-        oled_write_ln(debug_str, false);
-        static int counter = 0;
-        itoa(counter++, debug_str, 10);
-        oled_set_cursor(1, 2);
-        oled_write_P(PSTR("Counter:  "), false);
-        oled_write_ln(debug_str, false);
-        return false;
+        if (anim_step(i % ANIMS)) {
+            for(int j = i; j > activeAnim; --j)
+            {
+                anims[j] = anims[j - 1];
+            }
+            ++activeAnim;
+            --activeAnims;
+        }
     }
-#endif
+    activeAnim = activeAnim % ANIMS;
 
-    static int t = 0;
-    if(t%32 == 0)
-    anim_rain(t/32);
-    ++t;
-    if (t > 200*32)
-        t = 0;
+    //static int t = 0;
+    //if (t++ % 32 == 0) anim_drop();
     return false;
-
-    //render_logo();
-
-#if 0
-    static int test = 0;
-    if(test == 0)
-        oled_clear();
-    else
-        oled32_write(oled32_read(test - 1)<<8, test-1);
-    oled32_write((uint32_t)1 << (test % 32), test);
-    test = (test + 1) % (128);
-#endif
-
-    return false;
-/*
-    uint32_t timer_now = timer_read32();
-    bool timed_out = TIMER_DIFF_32(timer_now, info_timeout_start) > 10000;
-    bool dirty = timed_out != info_timed_out;
-    info_timed_out = timed_out;
-    if (info_timed_out)
-    {
-        if (dirty)
-            render_logo();
-    }
-    else
-    {
-        if (dirty)
-            oled_clear();
-
-        #ifdef DEBUG_MATRIX_SCAN_RATE
-        char rate_str[12];
-        itoa(get_matrix_scan_rate(), rate_str, 10);
-        oled_set_cursor(1, 1);
-        oled_write_P(PSTR("Scan: "), false);
-        oled_write_ln(rate_str, false);
-        itoa(get_rgb_matrix_display_rate(), rate_str, 10);
-        oled_set_cursor(1, 2);
-        oled_write_P(PSTR("RGB:  "), false);
-        oled_write_ln(rate_str, false);
-        #endif
-    }
-    return false;*/
 }
 
 void post_process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-    //info_timeout_start = timer_read32();
+    last_event_time = timer_read32();
 
-    //if (record->event.pressed)
-    //    logo_anim_pixel();
+    if (record->event.pressed)
+    {
+        anim_drop();
+    }
 }
