@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 extern int mydebug;
 
 extern i2c_status_t mcp23017_status;
-#define I2C_TIMEOUT 1000
+#define I2C_TIMEOUT 10
 
 // For a better understanding of the i2c protocol, this is a good read:
 // https://www.robot-electronics.co.uk/i2c-tutorial
@@ -141,6 +141,7 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         // select on mcp23017
         if (mcp23017_status) {  // if there was an error
                                 // do nothing
+            break;
         } else {
             // Select the desired row by writing a byte for the entire GPIOB bus where only the bit representing the row we want to select is a zero (write instruction) and every other bit is a one.
             // Note that the row - MATRIX_ROWS_PER_SIDE reflects the fact that being on the right hand, the columns are numbered from MATRIX_ROWS_PER_SIDE to MATRIX_ROWS, but the pins we want to write to are indexed from zero up on the GPIOB bus.
@@ -149,7 +150,7 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         }
 
         if (mcp23017_status) {  // if there was an error
-            return 0;
+            break;
         } else {
             uint8_t buf[]   = {GPIOB};
             mcp23017_status = i2c_transmit(I2C_ADDR_WRITE, buf, sizeof(buf), I2C_TIMEOUT);
