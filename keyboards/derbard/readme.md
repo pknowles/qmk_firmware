@@ -1,12 +1,17 @@
-# derbard
+# DerBard
 
-![derbard](imgur.com image replace me!)
+![derbard](https://img.heuristic42.com/img/63ca4e6ab5e4.jpg)
 
-*A short description of the keyboard/project*
+An ergonomic split 65 key keyboard with inbuilt palmrests, backwards tilt and
+per-key RGB lighting.
+
+Blog post: https://www.heuristic42.com/blog/55/derbard-custom-split-mechanical-keyboard-prototype/
+
+Print files: [Thingiverse](https://www.thingiverse.com/thing:6219499)
 
 * Keyboard Maintainer: [Pyarelal Knowles](https://github.com/pknowles)
-* Hardware Supported: *The PCBs, controllers supported*
-* Hardware Availability: *Links to where you can find this hardware*
+* Hardware Supported: Arduino ATmega32u4 (Tested with Elite-C V4 board), NeoKey PCBs, WS2812 LEDs, MCP23017 GPIO expander, SSD1306 128x32 display
+* Hardware Availability: *TODO: Links to where you can find this hardware*
 
 Make example for this keyboard (after setting up your build environment):
 
@@ -20,8 +25,7 @@ See the [build environment setup](https://docs.qmk.fm/#/getting_started_build_to
 
 ## Bootloader
 
-Enter the bootloader in 3 ways:
+Enter the bootloader in 2 ways:
 
-* **Bootmagic reset**: Hold down the key at (0,0) in the matrix (usually the top left key or Escape) and plug in the keyboard
-* **Physical reset button**: Briefly press the button on the back of the PCB - some may have pads you must short instead
-* **Keycode in layout**: Press the key mapped to `QK_BOOT` if it is available
+* **Physical reset button**: Briefly press the button on the back of the PCB
+* **Keycode in layout**: Hold bottom right key, then press top right key on the right half of the board. See `RESET` in `keymap.c`.
